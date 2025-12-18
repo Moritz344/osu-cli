@@ -3,11 +3,14 @@ import { startServer } from './server.ts';
 import fs from 'fs';
 import path from 'path';
 
+
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf-8"));
-const CLIENT_ID = "46768";
+const CLIENT_ID = 46768;
 const CLIENT_SECRET: any = Bun.env.CLIENT_SECRET;
 const REDIRECT_URI: any = Bun.env.REDIRECT_URI;
 const base_url = "https://osu.ppy.sh/api/v2/";
+
+// TODO: limit changelogs
 
 function isTokenExpired() {
   return Date.now() >= config.expires_in;
@@ -16,7 +19,7 @@ function isTokenExpired() {
 
 
 function startOAuthFlow() {
-  startServer(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+  startServer(CLIENT_ID.toString(), CLIENT_SECRET, REDIRECT_URI);
 }
 
 
@@ -45,8 +48,8 @@ async function home() {
           value: "beatmap-search"
         },
         {
-          name: "Search Events",
-          value: "event-search"
+          name: "Get Changelog",
+          value: "changelog-search"
         },
         {
           name: "Exit",
@@ -59,6 +62,8 @@ async function home() {
       await searchUsername();
     } else if (answer == "beatmap-search") {
       await searchBeatmap();
+    } else if (answer == "changelog-search") {
+      await searchChangelog();
     }
 
   } catch (err) {
@@ -68,6 +73,7 @@ async function home() {
 }
 
 async function searchUsername() {
+
   try {
     const answer = await search({
       message: 'Username:',
@@ -76,7 +82,7 @@ async function searchUsername() {
           return [];
         }
 
-        const url = base_url + `users/${encodeURIComponent(input)}/osu`;
+        const url = base_url + `search?query=${encodeURIComponent(input)}`;
         const response = await fetch(url, {
           method: 'GET',
           headers: {
@@ -87,16 +93,19 @@ async function searchUsername() {
         });
         const data: any = await response.json();
 
-        if (data.username == undefined) {
-          return [];
-        }
+        const users = data.user.data;
 
-        return [{ name: data.username, value: data.username }];
+        return users.map((user: any) => ({
+          name: user.username,
+          value: user.id,
+        }));
       },
     });
+    console.log(answer);
   } catch (err) {
     await home();
   }
+
 
 }
 
@@ -138,6 +147,44 @@ async function searchBeatmap() {
     await home();
   }
 
+
+}
+
+async function searchChangelog() {
+  try {
+    let choicesList = [];
+    const url = base_url + `changelog?stream=lazer&since=2021`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        "Authorization": `Bearer ${config.access_token}`,
+        "Content-Type": "application/json"
+      },
+    });
+    const data: any = await response.json();
+
+    choicesList = data.builds.flatMap((build: any) =>
+      build.changelog_entries.map((entry: any) => ({
+        name: entry.title,
+        value: build.version
+      }))
+    );
+
+    const answer: string = await select({
+      message: 'Changelog:',
+      pageSize: 10,
+      loop: false,
+      choices: choicesList
+    });
+    await showChangelog(answer);
+  } catch (err) {
+    await home();
+  }
+
+}
+
+async function showChangelog(version: string) {
 
 }
 
