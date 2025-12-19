@@ -47,7 +47,8 @@ function saveAccessToken(token: string, expires_in: number) {
 
   const data = {
     access_token: token,
-    expires_in: Date.now() + expires_in * 1000
+    expires_in: expires_in,
+    date: new Date()
   }
 
   fs.writeFileSync(

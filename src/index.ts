@@ -14,7 +14,12 @@ const base_url = "https://osu.ppy.sh/api/v2/";
 // TODO: limit changelogs
 
 function isTokenExpired() {
-  return Date.now() >= config.expires_in;
+  const started = new Date(config.date).getTime();
+  const expires_in = config.expires_in * 1000;
+
+  const expiresAt = started + expires_in;
+  return Date.now() >= expiresAt;
+
 }
 
 
