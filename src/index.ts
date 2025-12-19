@@ -1,4 +1,4 @@
-import { search, select, Separator } from '@inquirer/prompts';
+import { search, select, Separator, input } from '@inquirer/prompts';
 import { startServer } from './server.ts';
 import fs from 'fs';
 import path from 'path';
@@ -50,7 +50,7 @@ async function home() {
           value: "beatmap-search"
         },
         {
-          name: "Get Changelog",
+          name: "Latest Changelog",
           value: "changelog-search"
         },
         {
@@ -65,7 +65,7 @@ async function home() {
     } else if (answer == "beatmap-search") {
       await searchBeatmap();
     } else if (answer == "changelog-search") {
-      await searchChangelog();
+      await showChangelog();
     }
 
   } catch (err) {
@@ -255,11 +255,9 @@ async function showBeatmap(id: unknown) {
 
 }
 
-async function searchChangelog() {
+async function getLatestChangelogBuild() {
   try {
-    let choicesList = [];
-    const url = base_url + `changelog?stream=lazer`;
-
+    const url = base_url + "changelog/lazer";
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -268,31 +266,42 @@ async function searchChangelog() {
       },
     });
     const data: any = await response.json();
+    const latest_build = data.changelog_entries;
+    return latest_build[0];
 
-    choicesList = data.builds.flatMap((build: any) =>
-      build.changelog_entries.map((entry: any) => ({
-        name: entry.title,
-        value: build.version
-      }))
-    );
-
-    const answer: string = await select({
-      message: 'Changelog:',
-      pageSize: 10,
-      loop: false,
-      choices: choicesList
-    });
-    await showChangelog(answer);
   } catch (err) {
-    if (err instanceof Error && err.name === "ExitPromptError") {
-      await home();
-    }
+    console.log(err);
+  }
+}
+
+async function showChangelog() {
+  console.clear();
+  const data = await getLatestChangelogBuild();
+  const entry = {
+    name: data.title,
+    msg: data.message,
+    category: data.category,
+    user: data.github_user.display_name,
+    id: data.id
+  }
+  let a = [];
+  console.log(chalk.hex("#FF4D4D")(entry.name));
+  for (let i = 0; i < entry.name.length; i++) {
+    a.push("-");
+  }
+  console.log("id: " + entry.id);
+  console.log("Category: " + entry.category);
+  console.log("User: " + entry.user);
+  console.log();
+  console.log("Message:");
+  console.log(entry.msg);
+
+  const answer = await input({ message: 'Go back? (y/N)' });
+  if (answer == "y") {
+    await home();
+  } else {
+    await showChangelog();
   }
 
 }
-
-async function showChangelog(version: string) {
-
-}
-
 
