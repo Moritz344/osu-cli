@@ -6,7 +6,14 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(__filename);
 
 export function startServer(CLIENT_ID: string, CLIENT_SECRET: string, REDIRECT_URI: string) {
-  const login_url = "https://osu.ppy.sh/oauth/authorize?client_id=" + CLIENT_ID + "&redirect_uri=http://localhost:3000/callback&response_type=code&scope=public";
+  const scopes = encodeURIComponent("public chat.read chat.write chat.write_manage")
+  const login_url =
+    `https://osu.ppy.sh/oauth/authorize` +
+    `?client_id=${CLIENT_ID}` +
+    `&redirect_uri=http://localhost:3000/callback` +
+    `&response_type=code` +
+    `&scope=${scopes}`;
+
   console.log("Please login: " + login_url);
   serve({
     port: 3000,
@@ -42,13 +49,33 @@ export function startServer(CLIENT_ID: string, CLIENT_SECRET: string, REDIRECT_U
 
 }
 
+async function getUserId() {
+  try {
+    const url = "https://osu.ppy.sh/api/v2/me";
+    const config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf-8"));
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        "Authorization": `Bearer ${config.access_token}`,
+        "Content-Type": "application/json"
+      },
+    });
+    const data: any = await response.json();
+    return data.id;
 
-function saveAccessToken(token: string, expires_in: number) {
+  } catch (err) {
+
+  }
+
+}
+
+async function saveAccessToken(token: string, expires_in: number) {
 
   const data = {
     access_token: token,
     expires_in: expires_in,
-    date: new Date()
+    date: new Date(),
+    user_id: await getUserId()
   }
 
   fs.writeFileSync(
@@ -57,4 +84,5 @@ function saveAccessToken(token: string, expires_in: number) {
     "utf-8"
   );
 
+  console.log("You can restart the app now");
 }

@@ -55,6 +55,10 @@ async function home() {
           value: "beatmap-search"
         },
         {
+          name: "Join Chat Channel",
+          value: "join-chat"
+        },
+        {
           name: "Latest Changelog",
           value: "changelog-search"
         },
@@ -71,12 +75,142 @@ async function home() {
       await searchBeatmap();
     } else if (answer == "changelog-search") {
       await showChangelog();
+    } else if (answer == "join-chat") {
+      await showChatChannels();
+    } else if (answer == "exit") {
+      process.exit(0);
     }
 
   } catch (err) {
     console.log("Exit.");
   }
 
+}
+
+async function showChatChannels() {
+  try {
+    const url = base_url + `chat/channels`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        "Authorization": `Bearer ${config.access_token}`,
+        "Content-Type": "application/json"
+      },
+    });
+    const data: any = await response.json();
+    const choices = [];
+
+    for (let i = 0; i < data.length; i++) {
+      choices.push({ name: data[i]["name"], value: data[i]["channel_id"] });
+    }
+    const answer = await select({
+      message: "Channels",
+      loop: false,
+      choices: choices
+    });
+
+    await joinChatChannel(answer, config.user_id);
+
+  } catch (err) {
+    if (err instanceof Error && err.name === "ExitPromptError") {
+      await home();
+    }
+
+  }
+
+}
+
+async function joinChatChannel(id: number, user_id: number) {
+  try {
+    const url = base_url + `chat/channels/${id}/users/${user_id}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        "Authorization": `Bearer ${config.access_token}`,
+        "Content-Type": "application/json"
+      },
+    });
+    const data: any = await response.json();
+    console.log("Joined Channel: " + data.name);
+    console.log(data.description);
+    console.log("");
+
+    let lastMessageId = 0;
+    const messages: any = await getChatChannelMessages(id, 20);
+    for (const msg of messages) {
+      console.log(msg.name + ": " + msg.msg);
+    }
+    async function poll() {
+      try {
+
+        const messages = await getChatChannelMessages(id, 1);
+        if (!messages || messages.length == 0) {
+          return setTimeout(poll, 2000);
+        }
+
+        if (messages[0].id > lastMessageId) {
+          lastMessageId = messages[0].id;
+          console.log(messages[0].name + ": " + messages[0].msg);
+        }
+        setTimeout(poll, 2000);
+      } catch (err) {
+        await leaveChatChannel(id, user_id);
+      }
+    }
+    await poll();
+
+    process.on("SIGINT", () => {
+      (async () => {
+        await leaveChatChannel(id, user_id);
+        await showChatChannels();
+      })();
+    });
+
+
+  } catch (err) {
+  }
+
+}
+
+async function leaveChatChannel(id: number, user_id: number) {
+  try {
+    const url = base_url + `chat/channels/${id}/users/${user_id}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        "Authorization": `Bearer ${config.access_token}`,
+        "Content-Type": "application/json"
+      },
+    });
+    console.log(chalk.red("Leaving channel"));
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+async function getChatChannelMessages(id: number, limit: number) {
+  try {
+    const url = base_url + `chat/channels/${id}/messages`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        "Authorization": `Bearer ${config.access_token}`,
+        "Content-Type": "application/json"
+      },
+    });
+    const data: any = await response.json();
+    const messages = data.map((msg: any) => ({
+      msg: msg.content,
+      id: msg.message_id,
+      name: msg.sender.username
+    }));
+    return messages;
+
+  } catch (err) {
+    if (err instanceof Error && err.name === "ExitPromptError") {
+      await home();
+    }
+  }
 }
 
 async function searchUsername() {
