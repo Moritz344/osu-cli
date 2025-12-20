@@ -1,4 +1,4 @@
-# osu-tui
+# osu-cli
 
 https://github.com/user-attachments/assets/1cabf915-e9a1-4c31-97a4-890d42a24e1f
 
