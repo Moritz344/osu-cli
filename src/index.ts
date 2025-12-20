@@ -129,6 +129,27 @@ async function joinChatChannel(user_id: number) {
     polling = true;
     await leaveChatChannel(user_id);
 
+    const chatColorsArray = [
+      "#FFA500",
+      "#FF4500",
+      "#FF0000",
+      "#FFFF00",
+      "#00FF00",
+      "#0000FF",
+      "#8A2BE2",
+      "#4B0082",
+      "#FF69B4",
+      "#D2691E",
+      "#FF8C00",
+      "#ADFF2F",
+      "#20B2AA",
+      "#FFD700",
+      "#32CD32",
+      "#7B68EE",
+      "#FF1493",
+    ];
+
+
     const url = base_url + `chat/channels/${currentChannelId}/users/${user_id}`;
     const response = await fetch(url, {
       method: 'PUT',
@@ -142,10 +163,12 @@ async function joinChatChannel(user_id: number) {
     console.log(data.description);
     console.log("");
 
+
     let lastMessageId = 0;
     const messages: any = await getChatChannelMessages(currentChannelId, 20);
     for (const msg of messages) {
-      console.log(msg.name + ": " + msg.msg);
+      const randomColor: any = chatColorsArray[Math.floor(Math.random() * chatColorsArray.length)];
+      console.log(chalk.hex(randomColor)(msg.name) + ": " + msg.msg);
     }
     async function poll() {
       try {
@@ -157,7 +180,8 @@ async function joinChatChannel(user_id: number) {
 
         if (messages[0].id > lastMessageId) {
           lastMessageId = messages[0].id;
-          console.log(messages[0].name + ": " + messages[0].msg);
+          const randomColor: any = chatColorsArray[Math.floor(Math.random() * chatColorsArray.length)];
+          console.log(chalk.hex(randomColor)(messages[0].name) + ": " + messages[0].msg);
         }
         setTimeout(poll, 2000);
       } catch (err) {
