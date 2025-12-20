@@ -1,5 +1,15 @@
 # osu-tui
 
+https://github.com/user-attachments/assets/1cabf915-e9a1-4c31-97a4-890d42a24e1f
+
+# Features
+- get information about osu! users
+- get information about osu! beatmaps
+- join chat channels
+- get latest changelog
+
+# Run Locally
+
 To install dependencies:
 
 ```bash
@@ -12,4 +22,4 @@ To run:
 bun run index.ts
 ```
 
-This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+This project uses the osu! api: https://osu.ppy.sh/docs/index.html#get-user
