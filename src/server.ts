@@ -43,7 +43,6 @@ export function startServer(CLIENT_ID: string, CLIENT_SECRET: string, REDIRECT_U
         return new Response("Login successful. You can close this tab now");
       }
 
-      return new Response("Hello from Bun OAuth2 Server!");
     },
   });
 

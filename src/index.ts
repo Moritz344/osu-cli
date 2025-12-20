@@ -11,6 +11,9 @@ const CLIENT_SECRET: any = Bun.env.CLIENT_SECRET;
 const REDIRECT_URI: any = Bun.env.REDIRECT_URI;
 const base_url = "https://osu.ppy.sh/api/v2/";
 
+let polling = false;
+let currentChannelId: number = 0;
+
 // TODO: limit changelogs
 
 function isTokenExpired() {
@@ -109,7 +112,8 @@ async function showChatChannels() {
       choices: choices
     });
 
-    await joinChatChannel(answer, config.user_id);
+    currentChannelId = answer;
+    await joinChatChannel(config.user_id);
 
   } catch (err) {
     if (err instanceof Error && err.name === "ExitPromptError") {
@@ -120,9 +124,12 @@ async function showChatChannels() {
 
 }
 
-async function joinChatChannel(id: number, user_id: number) {
+async function joinChatChannel(user_id: number) {
   try {
-    const url = base_url + `chat/channels/${id}/users/${user_id}`;
+    polling = true;
+    await leaveChatChannel(user_id);
+
+    const url = base_url + `chat/channels/${currentChannelId}/users/${user_id}`;
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -136,14 +143,14 @@ async function joinChatChannel(id: number, user_id: number) {
     console.log("");
 
     let lastMessageId = 0;
-    const messages: any = await getChatChannelMessages(id, 20);
+    const messages: any = await getChatChannelMessages(currentChannelId, 20);
     for (const msg of messages) {
       console.log(msg.name + ": " + msg.msg);
     }
     async function poll() {
       try {
-
-        const messages = await getChatChannelMessages(id, 1);
+        if (!polling) { return };
+        const messages = await getChatChannelMessages(currentChannelId, 1);
         if (!messages || messages.length == 0) {
           return setTimeout(poll, 2000);
         }
@@ -154,16 +161,15 @@ async function joinChatChannel(id: number, user_id: number) {
         }
         setTimeout(poll, 2000);
       } catch (err) {
-        await leaveChatChannel(id, user_id);
+        polling = false;
       }
     }
-    await poll();
+    poll();
 
-    process.on("SIGINT", () => {
-      (async () => {
-        await leaveChatChannel(id, user_id);
-        await showChatChannels();
-      })();
+    process.once("SIGINT", async () => {
+      polling = false;
+      await leaveChatChannel(user_id);
+      await showChatChannels();
     });
 
 
@@ -172,9 +178,9 @@ async function joinChatChannel(id: number, user_id: number) {
 
 }
 
-async function leaveChatChannel(id: number, user_id: number) {
+async function leaveChatChannel(user_id: number) {
   try {
-    const url = base_url + `chat/channels/${id}/users/${user_id}`;
+    const url = base_url + `chat/channels/${currentChannelId}/users/${user_id}`;
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -182,7 +188,7 @@ async function leaveChatChannel(id: number, user_id: number) {
         "Content-Type": "application/json"
       },
     });
-    console.log(chalk.red("Leaving channel"));
+    //console.log(chalk.red("Leaving channel"));
   } catch (err) {
     console.log(err);
   }
