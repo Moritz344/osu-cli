@@ -43,6 +43,7 @@ export function startServer(CLIENT_ID: string, CLIENT_SECRET: string, REDIRECT_U
         return new Response("Login successful. You can close this tab now");
       }
 
+      return new Response("Hello from Bun OAuth2 Server!");
     },
   });
 
@@ -70,11 +71,13 @@ async function getUserId() {
 
 async function saveAccessToken(token: string, expires_in: number) {
 
+  const user_id = await getUserId();
+
   const data = {
     access_token: token,
     expires_in: expires_in,
     date: new Date(),
-    user_id: await getUserId()
+    user_id: user_id
   }
 
   fs.writeFileSync(
@@ -84,4 +87,5 @@ async function saveAccessToken(token: string, expires_in: number) {
   );
 
   console.log("You can restart the app now");
+  process.exit(0);
 }
