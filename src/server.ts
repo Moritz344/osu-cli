@@ -39,7 +39,8 @@ export function startServer(CLIENT_ID: string, CLIENT_SECRET: string, REDIRECT_U
         });
 
         const tokenData: any = await tokenRes.json();
-        saveAccessToken(tokenData.access_token, tokenData.expires_in);
+        const user_id = await getUserId(tokenData.access_token);
+        saveAccessToken(tokenData.access_token, tokenData.expires_in, user_id);
         return new Response("Login successful. You can close this tab now");
       }
 
@@ -49,14 +50,13 @@ export function startServer(CLIENT_ID: string, CLIENT_SECRET: string, REDIRECT_U
 
 }
 
-async function getUserId() {
+async function getUserId(access_token: string) {
   try {
     const url = "https://osu.ppy.sh/api/v2/me";
-    const config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf-8"));
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        "Authorization": `Bearer ${config.access_token}`,
+        "Authorization": `Bearer ${access_token}`,
         "Content-Type": "application/json"
       },
     });
@@ -69,9 +69,9 @@ async function getUserId() {
 
 }
 
-async function saveAccessToken(token: string, expires_in: number) {
 
-  const user_id = await getUserId();
+async function saveAccessToken(token: string, expires_in: number, user_id: string) {
+
 
   const data = {
     access_token: token,

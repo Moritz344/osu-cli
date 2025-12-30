@@ -3,6 +3,7 @@ import { startServer } from './server.ts';
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
+import { Command } from 'commander';
 
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf-8"));
@@ -14,9 +15,24 @@ const base_url = "https://osu.ppy.sh/api/v2/";
 let polling = false;
 let currentChannelId: number = 0;
 
-// TODO: limit changelogs
+const program = new Command();
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf-8"));
+
+function HandleCommands() {
+  program
+    .name("osu-cli")
+    .description("osu cli tool")
+    .version(pkg.version)
+
+
+  program.parse(process.argv);
+}
+HandleCommands();
 
 function isTokenExpired() {
+  if (config.expires_in == undefined) {
+    return true;
+  }
   const started = new Date(config.date).getTime();
   const expires_in = config.expires_in * 1000;
 
@@ -159,6 +175,13 @@ async function joinChatChannel(user_id: number) {
       },
     });
     const data: any = await response.json();
+    if (data.name == undefined) {
+      console.log(chalk.red("Error while joining channel!"));
+      setTimeout(() => {
+        showChatChannels();
+      }, 500);
+      return;
+    }
     console.log("Joined Channel: " + data.name);
     console.log(data.description);
     console.log("");
